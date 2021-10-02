@@ -41,6 +41,28 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+    private CameraDevice cameraDevice;
+    private CameraDevice.StateCallback cameraDeviceStateCallback = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice = camera;
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            camera.close();
+            cameraDevice =  null;
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+            camera.close();
+            cameraDevice = null;
+
+        }
+    };
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -62,6 +84,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onPause(){
+        super.onPause();
+
+        closeCamera();
+    }
+
+
+    @Override
     public void onWindowFocusChanged(boolean hasFocus){
         super.onWindowFocusChanged(hasFocus);
         View decorView = getWindow().getDecorView();
@@ -75,6 +105,13 @@ public class MainActivity extends AppCompatActivity {
                     | View.SYSTEM_UI_FLAG_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             );
+        }
+    }
+
+    private void closeCamera(){
+        if(cameraDevice!=null){
+            cameraDevice.close();
+            cameraDevice= null;
         }
     }
 }
