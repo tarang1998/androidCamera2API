@@ -11,7 +11,11 @@ import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
+import android.nfc.Tag;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.util.Log;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
@@ -26,7 +30,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
+
             Toast.makeText(getApplicationContext(),"Texture View available",Toast.LENGTH_SHORT).show();
+
             setUpCamera(width,height);
         }
 
@@ -68,10 +74,15 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private String cameraId;
+    private HandlerThread backgroundHandlerThread ;
+    private Handler backgroundHandler;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+        Toast.makeText(getApplicationContext(),"App Activity Created",Toast.LENGTH_SHORT).show();
+
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
@@ -82,11 +93,16 @@ public class MainActivity extends AppCompatActivity {
     protected  void onResume(){
         super.onResume();
 
-        Toast.makeText(getApplicationContext(),"Resumed",Toast.LENGTH_SHORT).show();
+        Toast.makeText(getApplicationContext(),"App Activity Resumed",Toast.LENGTH_SHORT).show();
+
+
+        startBackgroundThread();
 
 
         if(textureView.isAvailable()){
+
             setUpCamera(textureView.getWidth(),textureView.getHeight());
+
         }
         else{
             textureView.setSurfaceTextureListener(surfaceTextureListener);
@@ -95,12 +111,17 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause(){
-        super.onPause();
 
-        Toast.makeText(getApplicationContext(),"Paused",Toast.LENGTH_SHORT).show();
-
+        Toast.makeText(getApplicationContext(),"App Activity Paused",Toast.LENGTH_SHORT).show();
 
         closeCamera();
+
+
+        stopBackgroundThread();
+
+        super.onPause();
+
+
     }
 
 
@@ -122,6 +143,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setUpCamera(int width, int height){
+
+        Toast.makeText(getApplicationContext(),"Setting Up the Camera",Toast.LENGTH_SHORT).show();
+
         CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
         try {
             for(String id : cameraManager.getCameraIdList()){
@@ -138,9 +162,37 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void closeCamera(){
+
+        Toast.makeText(getApplicationContext(),"Closing the Camera",Toast.LENGTH_SHORT).show();
+
         if(cameraDevice!=null){
             cameraDevice.close();
             cameraDevice= null;
         }
+    }
+
+    private void startBackgroundThread(){
+
+        Toast.makeText(getApplicationContext(),"Starting the background thread",Toast.LENGTH_SHORT).show();
+
+        backgroundHandlerThread = new HandlerThread("Camera2VideoAudio");
+        backgroundHandlerThread.start();
+        backgroundHandler = new Handler(backgroundHandlerThread.getLooper());
+    }
+
+    private void stopBackgroundThread(){
+
+        Toast.makeText(getApplicationContext(),"Stopping the background thread",Toast.LENGTH_SHORT).show();
+
+        backgroundHandlerThread.quitSafely();
+        try {
+            backgroundHandlerThread.join();
+            backgroundHandlerThread = null;
+            backgroundHandler = null;
+
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
     }
 }
