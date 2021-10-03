@@ -6,22 +6,25 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
-import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
-import android.hardware.camera2.CaptureRequest;
-import android.nfc.Tag;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
+import android.util.Size;
 import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
-import android.widget.Button;
-import android.widget.Toast;
+
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -76,8 +79,10 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private String cameraId;
+    private Size previewSize;
     private HandlerThread backgroundHandlerThread ;
     private Handler backgroundHandler;
+    //Device Orientation into degrees
     private static SparseIntArray ORIENTATIONS = new SparseIntArray();
     static {
         ORIENTATIONS.append(Surface.ROTATION_0,0);
@@ -85,6 +90,16 @@ public class MainActivity extends AppCompatActivity {
         ORIENTATIONS.append(Surface.ROTATION_180,180);
         ORIENTATIONS.append(Surface.ROTATION_270,270);
 
+    }
+
+    //A class for comparisons between the different resolutions of the preview
+    private static class CompareSizeByArea implements Comparator<Size> {
+
+        @Override
+        public int compare(Size lhs, Size rhs) {
+            return Long.signum((long) lhs.getWidth() * lhs.getHeight() /
+                    (long) rhs.getWidth() * rhs.getHeight());
+        }
     }
 
 
@@ -172,18 +187,34 @@ public class MainActivity extends AppCompatActivity {
                 if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)== CameraCharacteristics.LENS_FACING_FRONT){
                     continue;
                 }
+                //Contains list of the various resolutions for the camera preview
+                StreamConfigurationMap map  = cameraCharacteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
                 int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
                 int totalRotation = sensorToDeviceRotation(cameraCharacteristics,deviceOrientation);
                 boolean swapRotation = totalRotation == 90 || totalRotation == 270 ;
                 int rotatedWidth = width;
                 int rotatedHeight = height;
+                //whether or not the device is in landscape or portrait mode
+                //We are forcing the values to go into a landscape size because the preview Resolutions are in landscape size
                 if(swapRotation){
 
                     Log.d("DEBUG_TEST","Swapping the width and height" );
 
                     rotatedWidth = height;
                     rotatedHeight = width;
+
+                    Log.d("DEBUG_TEST","Updated Texture View Width : " + Integer.toString(rotatedWidth) );
+
+                    Log.d("DEBUG_TEST","Updated Texture View Height : " + Integer.toString(rotatedHeight) );
+
                 }
+                //We now need to find the previewResolution of the camera sensor matching the texture view resolution
+                previewSize = chooseOptimalSize(map.getOutputSizes(SurfaceTexture.class),rotatedWidth,rotatedHeight);
+
+                Log.d("DEBUG_TEST","Optimal Preview Size Width : " + Integer.toString(previewSize.getWidth()) );
+
+                Log.d("DEBUG_TEST","Updated Texture View Height  : " + Integer.toString(previewSize.getHeight()) );
+
                 cameraId = id;
                 return;
             }
@@ -233,6 +264,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    //Device supports different orientation  - Portrait and Landscape
+    //Camera Sensor also supports different orientation - Portrait and Landscape
+    //Orientation of the sensor might not match the orientation of the device
+    //sensor has number of preview resolutions and they tend to be setup in landscape mode
+    //So while in portrait mode their height and width need to be swapped
+
+
     private static int sensorToDeviceRotation(CameraCharacteristics cameraCharacteristics, int deviceOrientation){
         int sensorOrientation =  cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
 
@@ -250,4 +288,34 @@ public class MainActivity extends AppCompatActivity {
         return totalRotation;
 
     }
+
+    //choices : Array of preview resolutions from the sensor
+    //width : Updated Texture View Width
+    //height : Updated Texture View Height
+    private static Size chooseOptimalSize(Size[] choices, int width , int height ){
+
+        //If the resolution of the sensor is big enough for the display
+        List<Size> bigEnough = new ArrayList<>();
+        Size selectedPreviewResolution = new Size(0,0);
+        for(Size option : choices){
+            //Choosing a appropriate Sensor Orientation
+            //Aspect ratio of the preview resolution matches that of the texture view
+            //Preview Resolution width is greater than or equal to the updated texture view height and the width
+            if( option.getHeight() ==  option.getWidth() * height/width &&
+                option.getWidth()>=width &&
+                option.getHeight()>= width){
+                    bigEnough.add(option);
+            }
+
+            if(bigEnough.size()>0){
+                //Returning the preview resolution most closely matching the texture view resolution
+                return Collections.min(bigEnough, new CompareSizeByArea());
+
+            }else
+                selectedPreviewResolution = choices[0];
+            }
+
+        return selectedPreviewResolution;
+        }
+
 }
