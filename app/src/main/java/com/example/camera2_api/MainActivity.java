@@ -135,7 +135,6 @@ public class MainActivity extends AppCompatActivity {
 
         startBackgroundThread();
 
-
         if(textureView.isAvailable()){
 
             setUpCamera(textureView.getWidth(),textureView.getHeight());
@@ -169,7 +168,26 @@ public class MainActivity extends AppCompatActivity {
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
         if(requestCode == REQUEST_CAMERA_PERMISSIONS_RESULT){
             if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
-                Toast.makeText(getApplicationContext(),"Failed to grant camera permissions",Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(),"Failed to grant camera permissions",Toast.LENGTH_SHORT).show();
+                Log.d("DEBUG_TEST","Failed to grant camera permissions");
+
+                //If you have denied access to the camera Previously
+                if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)){
+                    //Toast.makeText(this,"The app requires Camera Permissions", Toast.LENGTH_SHORT).show();
+                    Log.d("DEBUG_TEST","The app requires Camera Permissions");
+
+                }
+                else{
+                    Toast.makeText(getApplicationContext(),"Quiting the app : Insufficient Permissions",Toast.LENGTH_SHORT).show();
+
+                    Log.d("DEBUG_TEST","Insufficient Permissions");
+
+                    this.finishAffinity();
+
+
+
+                }
+
             }
         }
     }
@@ -258,14 +276,23 @@ public class MainActivity extends AppCompatActivity {
                 if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)==
                         PackageManager.PERMISSION_GRANTED){
 
+                    Log.d("DEBUG_TEST"," Camera Permissions Granted");
+
+
                 }else{
-                    //If you have denied access to the camera Previously
-                    if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)){
-                        Toast.makeText(this,"The app requires Camera Permissions", Toast.LENGTH_SHORT).show();
-                    }
+
+                    Log.d("DEBUG_TEST"," Camera Permissions Not Granted");
+
+                    Log.d("DEBUG_TEST"," Requesting Camera Permissions");
+
+
                     //Trying to access the camera permissions
                     //The result would be received in the onRequestPermissionsResult Callback
                     requestPermissions(new String [] {Manifest.permission.CAMERA},REQUEST_CAMERA_PERMISSIONS_RESULT);
+
+
+
+
                 }
             }
             else{
