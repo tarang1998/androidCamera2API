@@ -31,7 +31,9 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSurfaceTextureAvailable(@NonNull SurfaceTexture surface, int width, int height) {
 
-            Toast.makeText(getApplicationContext(),"Texture View available",Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(),"Texture View available",Toast.LENGTH_SHORT).show();
+            Log.d("DEBUG_TEST","Texture View Available");
+
 
             setUpCamera(width,height);
         }
@@ -76,12 +78,21 @@ public class MainActivity extends AppCompatActivity {
     private String cameraId;
     private HandlerThread backgroundHandlerThread ;
     private Handler backgroundHandler;
+    private static SparseIntArray ORIENTATIONS = new SparseIntArray();
+    static {
+        ORIENTATIONS.append(Surface.ROTATION_0,0);
+        ORIENTATIONS.append(Surface.ROTATION_90,90);
+        ORIENTATIONS.append(Surface.ROTATION_180,180);
+        ORIENTATIONS.append(Surface.ROTATION_270,270);
+
+    }
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
-        Toast.makeText(getApplicationContext(),"App Activity Created",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"App Activity Created",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","App Activity Created");
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -93,7 +104,8 @@ public class MainActivity extends AppCompatActivity {
     protected  void onResume(){
         super.onResume();
 
-        Toast.makeText(getApplicationContext(),"App Activity Resumed",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"App Activity Resumed",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","App Activity Resumed");
 
 
         startBackgroundThread();
@@ -112,7 +124,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onPause(){
 
-        Toast.makeText(getApplicationContext(),"App Activity Paused",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"App Activity Paused",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","App Activity Paused");
+
 
         closeCamera();
 
@@ -144,7 +158,12 @@ public class MainActivity extends AppCompatActivity {
 
     private void setUpCamera(int width, int height){
 
-        Toast.makeText(getApplicationContext(),"Setting Up the Camera",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"Setting Up the Camera",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","Setting up the camera");
+        Log.d("DEBUG_TEST","Texture View Width : " + Integer.toString(width) );
+        Log.d("DEBUG_TEST","Texture View Height : " + Integer.toString(height) );
+
+
 
         CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
         try {
@@ -152,6 +171,18 @@ public class MainActivity extends AppCompatActivity {
                 CameraCharacteristics cameraCharacteristics = cameraManager.getCameraCharacteristics(id);
                 if(cameraCharacteristics.get(CameraCharacteristics.LENS_FACING)== CameraCharacteristics.LENS_FACING_FRONT){
                     continue;
+                }
+                int deviceOrientation = getWindowManager().getDefaultDisplay().getRotation();
+                int totalRotation = sensorToDeviceRotation(cameraCharacteristics,deviceOrientation);
+                boolean swapRotation = totalRotation == 90 || totalRotation == 270 ;
+                int rotatedWidth = width;
+                int rotatedHeight = height;
+                if(swapRotation){
+
+                    Log.d("DEBUG_TEST","Swapping the width and height" );
+
+                    rotatedWidth = height;
+                    rotatedHeight = width;
                 }
                 cameraId = id;
                 return;
@@ -163,7 +194,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void closeCamera(){
 
-        Toast.makeText(getApplicationContext(),"Closing the Camera",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"Closing the Camera",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","Closing the camera");
+
 
         if(cameraDevice!=null){
             cameraDevice.close();
@@ -173,7 +206,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void startBackgroundThread(){
 
-        Toast.makeText(getApplicationContext(),"Starting the background thread",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"Starting the background thread",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","Starting the background thread");
+
 
         backgroundHandlerThread = new HandlerThread("Camera2VideoAudio");
         backgroundHandlerThread.start();
@@ -182,7 +217,9 @@ public class MainActivity extends AppCompatActivity {
 
     private void stopBackgroundThread(){
 
-        Toast.makeText(getApplicationContext(),"Stopping the background thread",Toast.LENGTH_SHORT).show();
+        //Toast.makeText(getApplicationContext(),"Stopping the background thread",Toast.LENGTH_SHORT).show();
+        Log.d("DEBUG_TEST","Stopping the background thread");
+
 
         backgroundHandlerThread.quitSafely();
         try {
@@ -193,6 +230,24 @@ public class MainActivity extends AppCompatActivity {
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+
+    }
+
+    private static int sensorToDeviceRotation(CameraCharacteristics cameraCharacteristics, int deviceOrientation){
+        int sensorOrientation =  cameraCharacteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+        Log.d("DEBUG_TEST","Sensor Orientation : " + Integer.toString(sensorOrientation) + " DeviceOrientation : " + Integer.toString(deviceOrientation));
+
+        deviceOrientation = ORIENTATIONS.get(deviceOrientation);
+
+        Log.d("DEBUG_TEST","Transformed device Orientation : " + Integer.toString(deviceOrientation));
+
+        int totalRotation = (sensorOrientation+deviceOrientation+360)%360;
+
+        Log.d("DEBUG_TEST","Total Rotation : " + Integer.toString(totalRotation));
+
+
+        return totalRotation;
 
     }
 }
