@@ -2,14 +2,18 @@ package com.example.camera2_api;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -19,6 +23,7 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.Toast;
 
 
 import java.util.ArrayList;
@@ -27,6 +32,8 @@ import java.util.Comparator;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+
+    private static final int REQUEST_CAMERA_PERMISSIONS_RESULT = 0;
 
     private TextureView textureView;
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
@@ -39,6 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
 
             setUpCamera(width,height);
+            connectCamera();
         }
 
         @Override
@@ -62,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
+            Toast.makeText(getApplicationContext(),"Camera Connections Made!!!",Toast.LENGTH_SHORT).show();
+            Log.d("DEBUG_TEST","Camera Connections Successfully Created");
         }
 
         @Override
@@ -129,6 +139,7 @@ public class MainActivity extends AppCompatActivity {
         if(textureView.isAvailable()){
 
             setUpCamera(textureView.getWidth(),textureView.getHeight());
+            connectCamera();
 
         }
         else{
@@ -153,6 +164,15 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    @Override
+    public void onRequestPermissionsResult(int requestCode , String[] permissions, int[] grantResults){
+        super.onRequestPermissionsResult(requestCode,permissions,grantResults);
+        if(requestCode == REQUEST_CAMERA_PERMISSIONS_RESULT){
+            if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
+                Toast.makeText(getApplicationContext(),"Failed to grant camera permissions",Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
 
     @Override
     public void onWindowFocusChanged(boolean hasFocus){
@@ -221,6 +241,41 @@ public class MainActivity extends AppCompatActivity {
         } catch (CameraAccessException e) {
             e.printStackTrace();
         }
+    }
+
+    private void  connectCamera(){
+
+        Log.d("DEBUG_TEST"," Connecting to the Camera");
+
+
+        CameraManager cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try{
+
+            Log.d("DEBUG_TEST"," Checking CameraPermissions");
+
+            //permissions needed to access camera for version beyond 23
+            if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+                if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)==
+                        PackageManager.PERMISSION_GRANTED){
+
+                }else{
+                    //If you have denied access to the camera Previously
+                    if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)){
+                        Toast.makeText(this,"The app requires Camera Permissions", Toast.LENGTH_SHORT).show();
+                    }
+                    //Trying to access the camera permissions
+                    //The result would be received in the onRequestPermissionsResult Callback
+                    requestPermissions(new String [] {Manifest.permission.CAMERA},REQUEST_CAMERA_PERMISSIONS_RESULT);
+                }
+            }
+            else{
+                cameraManager.openCamera(cameraId,cameraDeviceStateCallback,backgroundHandler);
+            }
+        }
+        catch(CameraAccessException error){
+            error.printStackTrace();
+        }
+
     }
 
     private void closeCamera(){
