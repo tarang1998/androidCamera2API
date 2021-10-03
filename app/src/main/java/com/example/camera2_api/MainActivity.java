@@ -9,9 +9,11 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.os.Build;
 import android.os.Bundle;
@@ -27,6 +29,7 @@ import android.widget.Toast;
 
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -70,8 +73,10 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
-            Toast.makeText(getApplicationContext(),"Camera Connections Made!!!",Toast.LENGTH_SHORT).show();
+            //Toast.makeText(getApplicationContext(),"Camera Connections Made!!!",Toast.LENGTH_SHORT).show();
             Log.d("DEBUG_TEST","Camera Connections Successfully Created");
+
+            startPreview();
         }
 
         @Override
@@ -88,8 +93,11 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
+
+
     private String cameraId;
     private Size previewSize;
+    private CaptureRequest.Builder captureRequestBuilder;
     private HandlerThread backgroundHandlerThread ;
     private Handler backgroundHandler;
     //Device Orientation into degrees
@@ -278,6 +286,9 @@ public class MainActivity extends AppCompatActivity {
 
                     Log.d("DEBUG_TEST"," Camera Permissions Granted");
 
+                    cameraManager.openCamera(cameraId,cameraDeviceStateCallback,backgroundHandler);
+
+
 
                 }else{
 
@@ -303,6 +314,42 @@ public class MainActivity extends AppCompatActivity {
             error.printStackTrace();
         }
 
+    }
+
+
+    private void startPreview(){
+
+        Log.d("DEBUG_TEST","Starting the camera Preview ");
+
+        SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
+        surfaceTexture.setDefaultBufferSize(previewSize.getWidth(),previewSize.getHeight());
+        Surface previewSurface = new Surface(surfaceTexture);
+
+
+        try {
+            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureRequestBuilder.addTarget(previewSurface);
+
+            cameraDevice.createCaptureSession(Arrays.asList(previewSurface), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    try {
+                        session.setRepeatingRequest(captureRequestBuilder.build(),null, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {
+                    Log.d("DEBUG_TEST","Failed to configure the camera Preview ");
+                }
+            },null);
+
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
     }
 
     private void closeCamera(){
@@ -391,9 +438,14 @@ public class MainActivity extends AppCompatActivity {
 
             if(bigEnough.size()>0){
                 //Returning the preview resolution most closely matching the texture view resolution
+
+                Log.d("DEBUG_TEST","Found a big enough preview Resolution, choosing the optimal one ");
+
                 return Collections.min(bigEnough, new CompareSizeByArea());
 
             }else
+                Log.d("DEBUG_TEST","Coudn't find a big enough preview Resolution, choosing the first one from choices ");
+
                 selectedPreviewResolution = choices[0];
             }
 
