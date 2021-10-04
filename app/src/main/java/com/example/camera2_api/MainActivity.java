@@ -15,6 +15,7 @@ import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
+import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -25,6 +26,7 @@ import android.util.SparseIntArray;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.Toast;
 
 
@@ -110,6 +112,9 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private ImageButton videoRecordingImageButton;
+    private boolean isVideoRecording = false;
+
     //A class for comparisons between the different resolutions of the preview
     private static class CompareSizeByArea implements Comparator<Size> {
 
@@ -131,6 +136,21 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         textureView = (TextureView) findViewById(R.id.textureView);
+        videoRecordingImageButton = (ImageButton) findViewById(R.id.videoButton);
+        videoRecordingImageButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(isVideoRecording){
+                    isVideoRecording = false;
+                    videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_online);
+                }
+                else{
+                    isVideoRecording = true;
+                    videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_busy);
+
+                }
+            }
+        });
     }
 
     @Override
@@ -321,6 +341,7 @@ public class MainActivity extends AppCompatActivity {
 
         Log.d("DEBUG_TEST","Starting the camera Preview ");
 
+        //camera API requires  surfaceTexture
         SurfaceTexture surfaceTexture = textureView.getSurfaceTexture();
         surfaceTexture.setDefaultBufferSize(previewSize.getWidth(),previewSize.getHeight());
         Surface previewSurface = new Surface(surfaceTexture);
@@ -333,7 +354,13 @@ public class MainActivity extends AppCompatActivity {
             cameraDevice.createCaptureSession(Arrays.asList(previewSurface), new CameraCaptureSession.StateCallback() {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
+
+                    Log.d("DEBUG_TEST","Configured the capture session");
+
                     try {
+                        //Listener is kept null as we do not want to do anything with the data
+                        //Just display data
+                        //Operations  happening in the background handler
                         session.setRepeatingRequest(captureRequestBuilder.build(),null, backgroundHandler);
                     } catch (CameraAccessException e) {
                         e.printStackTrace();
