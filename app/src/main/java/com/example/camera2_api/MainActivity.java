@@ -32,10 +32,13 @@ import android.widget.Toast;
 
 
 import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
@@ -498,6 +501,21 @@ public class MainActivity extends AppCompatActivity {
             videoFolder.mkdirs();
         }
 
+    }
+
+    private File createVideoFileName() throws IOException{
+
+        String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+
+        String preAppendedTimeStamp = "VIDEO_" + timestamp + "_";
+
+        File videoFile = File.createTempFile(preAppendedTimeStamp , ".mp4" , videoFolder);
+
+        videoFileName = videoFile.getAbsolutePath();
+
+        Log.d("DEBUG_TEST","Creating the video File : " + videoFileName);
+
+        return videoFile;
     }
 
 }
