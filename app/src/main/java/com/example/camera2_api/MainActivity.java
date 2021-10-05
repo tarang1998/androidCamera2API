@@ -18,6 +18,7 @@ import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
@@ -30,6 +31,7 @@ import android.widget.ImageButton;
 import android.widget.Toast;
 
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -115,6 +117,9 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton videoRecordingImageButton;
     private boolean isVideoRecording = false;
 
+    private File  videoFolder;
+    private String videoFileName;
+
     //A class for comparisons between the different resolutions of the preview
     private static class CompareSizeByArea implements Comparator<Size> {
 
@@ -134,6 +139,8 @@ public class MainActivity extends AppCompatActivity {
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        createVideoFolder();
 
         textureView = (TextureView) findViewById(R.id.textureView);
         videoRecordingImageButton = (ImageButton) findViewById(R.id.videoButton);
@@ -478,5 +485,19 @@ public class MainActivity extends AppCompatActivity {
 
         return selectedPreviewResolution;
         }
+
+    private void createVideoFolder(){
+
+        Log.d("DEBUG_TEST","Creating the video Folder if it doesn't exists");
+
+
+        File movieFile = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+        videoFolder = new File(movieFile,"camera2VideoImage");
+        if(!videoFolder.exists()){
+            //mkdirs - would create the parent folder too incase they are not already created
+            videoFolder.mkdirs();
+        }
+
+    }
 
 }
