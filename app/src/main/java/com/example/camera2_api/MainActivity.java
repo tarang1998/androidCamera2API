@@ -44,6 +44,7 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSIONS_RESULT = 0;
+    private static final int REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT = 1;
 
     private TextureView textureView;
     private TextureView.SurfaceTextureListener surfaceTextureListener = new TextureView.SurfaceTextureListener() {
@@ -147,16 +148,20 @@ public class MainActivity extends AppCompatActivity {
 
         textureView = (TextureView) findViewById(R.id.textureView);
         videoRecordingImageButton = (ImageButton) findViewById(R.id.videoButton);
+
         videoRecordingImageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if(isVideoRecording){
+
+                    Log.d("DEBUG_TEST","Video Recording Stopped");
+
                     isVideoRecording = false;
                     videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_online);
                 }
                 else{
-                    isVideoRecording = true;
-                    videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_busy);
+
+                    checkWriteStoragePermission();
 
                 }
             }
@@ -205,27 +210,58 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(int requestCode , String[] permissions, int[] grantResults){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
         if(requestCode == REQUEST_CAMERA_PERMISSIONS_RESULT){
-            if(grantResults[0] != PackageManager.PERMISSION_GRANTED){
+            if(grantResults[0] != PackageManager.PERMISSION_GRANTED) {
                 //Toast.makeText(getApplicationContext(),"Failed to grant camera permissions",Toast.LENGTH_SHORT).show();
-                Log.d("DEBUG_TEST","Failed to grant camera permissions");
+                Log.d("DEBUG_TEST", "Failed to grant camera permissions");
 
                 //If you have denied access to the camera Previously
-                if(shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)){
+                if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
                     //Toast.makeText(this,"The app requires Camera Permissions", Toast.LENGTH_SHORT).show();
-                    Log.d("DEBUG_TEST","The app requires Camera Permissions");
+                    Log.d("DEBUG_TEST", "The app requires Camera Permissions");
 
-                }
-                else{
-                    Toast.makeText(getApplicationContext(),"Quiting the app : Insufficient Permissions",Toast.LENGTH_SHORT).show();
+                } else {
+                    Toast.makeText(getApplicationContext(), "Quiting the app : Insufficient Permissions", Toast.LENGTH_SHORT).show();
 
-                    Log.d("DEBUG_TEST","Insufficient Permissions");
+                    Log.d("DEBUG_TEST", "Insufficient Permissions");
 
                     this.finishAffinity();
 
 
-
                 }
 
+            }
+        }
+
+        if(requestCode == REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT){
+            if(grantResults[0] == PackageManager.PERMISSION_GRANTED){
+
+                Log.d("DEBUG_TEST", "External Storage Permission Granted. ");
+
+                isVideoRecording = true;
+                videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_busy);
+                try {
+                    createVideoFileName();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else{
+                if(shouldShowRequestPermissionRationale(Manifest.permission.WRITE_EXTERNAL_STORAGE)){
+
+                    Log.d("DEBUG_TEST", "The app requires Permissions to save videos");
+
+                    //Toast.makeText(this, "This app needs permission to save videos",Toast.LENGTH_SHORT).show();
+
+                }
+                else{
+
+                    Toast.makeText(getApplicationContext(), "Quiting the app : Insufficient Permissions", Toast.LENGTH_SHORT).show();
+
+                    Log.d("DEBUG_TEST", "Insufficient Permissions, Quiting the app");
+
+                    this.finishAffinity();
+
+                }
             }
         }
     }
@@ -289,7 +325,7 @@ public class MainActivity extends AppCompatActivity {
 
                 Log.d("DEBUG_TEST","Optimal Preview Size Width : " + Integer.toString(previewSize.getWidth()) );
 
-                Log.d("DEBUG_TEST","Updated Texture View Height  : " + Integer.toString(previewSize.getHeight()) );
+                Log.d("DEBUG_TEST","Optimal Preview Size Height  : " + Integer.toString(previewSize.getHeight()) );
 
                 cameraId = id;
                 return;
@@ -463,15 +499,16 @@ public class MainActivity extends AppCompatActivity {
         //If the resolution of the sensor is big enough for the display
         List<Size> bigEnough = new ArrayList<>();
         Size selectedPreviewResolution = new Size(0,0);
-        for(Size option : choices){
+        for(Size option : choices) {
             //Choosing a appropriate Sensor Orientation
             //Aspect ratio of the preview resolution matches that of the texture view
             //Preview Resolution width is greater than or equal to the updated texture view height and the width
-            if( option.getHeight() ==  option.getWidth() * height/width &&
-                option.getWidth()>=width &&
-                option.getHeight()>= width){
-                    bigEnough.add(option);
+            if (option.getHeight() == option.getWidth() * height / width &&
+                    option.getWidth() >= width &&
+                    option.getHeight() >= width) {
+                bigEnough.add(option);
             }
+        }
 
             if(bigEnough.size()>0){
                 //Returning the preview resolution most closely matching the texture view resolution
@@ -480,7 +517,7 @@ public class MainActivity extends AppCompatActivity {
 
                 return Collections.min(bigEnough, new CompareSizeByArea());
 
-            }else
+            }else{
                 Log.d("DEBUG_TEST","Coudn't find a big enough preview Resolution, choosing the first one from choices ");
 
                 selectedPreviewResolution = choices[0];
@@ -516,6 +553,39 @@ public class MainActivity extends AppCompatActivity {
         Log.d("DEBUG_TEST","Creating the video File : " + videoFileName);
 
         return videoFile;
+    }
+
+    private void checkWriteStoragePermission(){
+
+        Log.d("DEBUG_TEST","Checking the write storage permissions for build versions greater than : " + String.valueOf(Build.VERSION_CODES.M));
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.M){
+            if(ContextCompat.checkSelfPermission(this,Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            == PackageManager.PERMISSION_GRANTED){
+                isVideoRecording = true;
+                videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_busy);
+                try {
+                    createVideoFileName();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+            else{
+
+                requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},REQUEST_WRITE_EXTERNAL_STORAGE_PERMISSION_RESULT);
+
+            }
+            
+        }
+        else{
+            isVideoRecording = true;
+            videoRecordingImageButton.setImageResource(android.R.drawable.presence_video_busy);
+            try {
+                createVideoFileName();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
 }
